@@ -1,102 +1,66 @@
-import { Link } from "react-router-dom";
-import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { ThemeToggle } from "./ThemeToggle";
+import { Store, Settings } from "lucide-react";
+import { cn } from "../lib/utils";
 
 export default function Navigation() {
-  const [open, setOpen] = useState(false);
+  const location = useLocation();
+
+  const isActive = (path: string) => location.pathname === path;
 
   return (
-    <header className="w-full border-b bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
-      <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-        <Link to="/" className="font-semibold text-lg flex items-center gap-3">
-          <span className="inline-block w-9 h-9 rounded-md bg-linear-to-br from-(--color-primary) to-(--color-accent) shadow-md" />
-          <span>Boilerplate</span>
-        </Link>
-
-        <div className="hidden md:flex items-center gap-6">
-          <nav className="flex gap-4 items-center">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
+      <div className="container flex h-14 items-center px-6">
+        <div className="mr-4 hidden md:flex">
+          <Link to="/" className="mr-6 flex items-center space-x-2">
+            <Store className="h-6 w-6" />
+            <span className="hidden font-bold sm:inline-block">
+              DM POS Terminal
+            </span>
+          </Link>
+          <nav className="flex items-center space-x-6 text-sm font-medium">
             <Link
               to="/"
-              className="text-sm text-gray-700 dark:text-gray-200 hover:underline"
+              className={cn(
+                "transition-colors hover:text-foreground/80",
+                isActive("/") ? "text-foreground font-bold" : "text-foreground/60"
+              )}
             >
-              Home
+              Register
             </Link>
             <Link
-              to="/about"
-              className="text-sm text-gray-700 dark:text-gray-200 hover:underline"
+              to="/orders"
+              className={cn(
+                "transition-colors hover:text-foreground/80",
+                isActive("/orders") ? "text-foreground font-bold" : "text-foreground/60"
+              )}
             >
-              About
-            </Link>
-            <Link
-              to="/contact"
-              className="text-sm text-gray-700 dark:text-gray-200 hover:underline"
-            >
-              Contact
+              History
             </Link>
           </nav>
-          <ThemeToggle />
         </div>
-
-        <div className="md:hidden flex items-center gap-2">
-          <ThemeToggle />
-          <button
-            aria-label="Toggle menu"
-            onClick={() => setOpen((s) => !s)}
-            className="p-2 rounded-md border bg-white/60 dark:bg-gray-800/60"
-          >
-            <svg
-              className="w-5 h-5 text-gray-700 dark:text-gray-200"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-            >
-              {open ? (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              ) : (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              )}
-            </svg>
-          </button>
+        
+        <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
+          <div className="w-full flex-1 md:w-auto md:flex-none">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground px-4">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </span>
+              System Online
+            </div>
+          </div>
+          <nav className="flex items-center gap-2">
+            <ThemeToggle />
+            <Link to="/settings">
+                <button className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-9 w-9">
+                    <Settings className="h-4 w-4" />
+                    <span className="sr-only">Settings</span>
+                </button>
+            </Link>
+          </nav>
         </div>
       </div>
-
-      {open && (
-        <div className="md:hidden bg-white/90 dark:bg-gray-900/95 border-t">
-          <div className="container mx-auto px-6 py-4 flex flex-col gap-3">
-            <Link
-              to="/"
-              onClick={() => setOpen(false)}
-              className="text-base text-gray-800 dark:text-gray-100"
-            >
-              Home
-            </Link>
-            <Link
-              to="/about"
-              onClick={() => setOpen(false)}
-              className="text-base text-gray-800 dark:text-gray-100"
-            >
-              About
-            </Link>
-            <Link
-              to="/contact"
-              onClick={() => setOpen(false)}
-              className="text-base text-gray-800 dark:text-gray-100"
-            >
-              Contact
-            </Link>
-          </div>
-        </div>
-      )}
     </header>
   );
 }
