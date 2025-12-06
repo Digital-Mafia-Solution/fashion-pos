@@ -13,9 +13,9 @@ export function ThemeToggle() {
       className="w-9 h-9 rounded-full hover:bg-accent hover:text-accent-foreground transition-colors"
     >
       {theme === "light" ? (
-        <Moon className="h-4 w-4 transition-all" />
+        <Moon className="text-primary h-4 w-4 transition-all" />
       ) : (
-        <Sun className="h-4 w-4 transition-all" />
+        <Sun className="text-primary h-4 w-4 transition-all" />
       )}
       <span className="sr-only">Toggle theme</span>
     </Button>

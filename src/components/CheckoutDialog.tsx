@@ -81,13 +81,11 @@ export function CheckoutDialog({ open, onOpenChange, cart, total, locationId, on
     } catch (error: unknown) {
       console.error("Transaction error:", error);
       
-      // Safe error message extraction
       let errorMessage = "An unknown error occurred";
       
       if (error instanceof Error) {
         errorMessage = error.message;
       } else if (typeof error === 'object' && error !== null) {
-        // Check for common Supabase error properties safely
         if ('message' in error) {
           errorMessage = String((error as { message: unknown }).message);
         } else if ('error_description' in error) {
@@ -102,9 +100,9 @@ export function CheckoutDialog({ open, onOpenChange, cart, total, locationId, on
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md bg-background text-foreground border-border">
         <DialogHeader>
-          <DialogTitle className="text-center text-xl">
+          <DialogTitle className="text-center text-xl text-foreground">
             {step === "success" ? "Payment Successful" : `Total: R ${total.toFixed(2)}`}
           </DialogTitle>
         </DialogHeader>
@@ -114,7 +112,7 @@ export function CheckoutDialog({ open, onOpenChange, cart, total, locationId, on
             <div className="grid grid-cols-2 gap-4">
               <Button 
                 variant="outline" 
-                className="h-32 flex flex-col gap-3 text-lg hover:border-primary hover:bg-primary/5"
+                className="h-32 flex flex-col gap-3 text-lg hover:border-primary hover:bg-primary/10 hover:text-primary transition-all bg-card text-foreground"
                 onClick={() => processSale()}
               >
                 <CreditCard className="w-10 h-10 mb-2" />
@@ -122,7 +120,7 @@ export function CheckoutDialog({ open, onOpenChange, cart, total, locationId, on
               </Button>
               <Button 
                 variant="outline" 
-                className="h-32 flex flex-col gap-3 text-lg hover:border-primary hover:bg-primary/5"
+                className="h-32 flex flex-col gap-3 text-lg hover:border-primary hover:bg-primary/10 hover:text-primary transition-all bg-card text-foreground"
                 onClick={() => processSale()}
               >
                 <Banknote className="w-10 h-10 mb-2" />
@@ -140,8 +138,9 @@ export function CheckoutDialog({ open, onOpenChange, cart, total, locationId, on
 
           {step === "success" && (
             <div className="flex flex-col items-center justify-center py-8">
-              <CheckCircle2 className="w-16 h-16 text-green-500 mb-4" />
-              <p className="text-lg font-medium">Receipt Sent</p>
+              {/* Use text-primary to match your theme (green) */}
+              <CheckCircle2 className="w-16 h-16 text-primary mb-4" />
+              <p className="text-lg font-medium text-foreground">Receipt Sent</p>
             </div>
           )}
         </div>

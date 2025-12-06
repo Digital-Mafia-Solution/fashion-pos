@@ -112,20 +112,18 @@ export default function POS() {
     p.sku.toLowerCase().includes(search.toLowerCase())
   );
 
-  // --- MATH FIXES ---
-  // Total is simple sum because price includes tax
   const total = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
-  // Tax is extracted (15% VAT means the price is 115% of base)
   const taxAmount = total - (total / 1.15);
   const subTotal = total - taxAmount;
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] w-full bg-gray-100 text-slate-900 font-sans overflow-hidden">
+    <div className="flex h-full w-full bg-muted/20 text-foreground font-sans overflow-hidden transition-colors">
       <Toaster />
       
       {/* LEFT COLUMN: Store Interface */}
       <div className="flex-1 flex flex-col h-full min-w-0">
-        <div className="bg-white border-b px-6 py-4 flex justify-between items-center shadow-sm z-10 shrink-0">
+        {/* Header Bar */}
+        <div className="bg-background border-b border-border px-6 py-4 flex justify-between items-center shadow-sm z-10 shrink-0">
           <h1 className="text-xl font-bold flex items-center gap-2">
             <Store className="text-primary" />
             Digital Mafia POS
@@ -133,17 +131,17 @@ export default function POS() {
           
           <div className="flex items-center gap-4 w-1/2">
             <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input 
                 placeholder="Search products..." 
-                className="pl-9 bg-gray-50 border-gray-200"
+                className="pl-9 bg-muted/50 border-input focus-visible:ring-primary"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
             
             <Select value={selectedLocation} onValueChange={handleLocationChange}>
-              <SelectTrigger className="w-60 border-gray-200 bg-gray-50">
+              <SelectTrigger className="w-60 border-input bg-muted/50">
                 <SelectValue placeholder="Select Store" />
               </SelectTrigger>
               <SelectContent>
@@ -155,6 +153,7 @@ export default function POS() {
           </div>
         </div>
 
+        {/* Product Grid */}
         <div className="flex-1 overflow-hidden p-4">
             <ScrollArea className="h-full w-full pr-4">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-4">
@@ -163,14 +162,14 @@ export default function POS() {
                 return (
                     <Card 
                     key={product.id} 
-                    className={`cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all active:scale-95 border-0 shadow-sm overflow-hidden group ${stock === 0 ? 'opacity-60 grayscale pointer-events-none' : ''}`}
+                    className={`cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all active:scale-95 border-border shadow-sm overflow-hidden group bg-card text-card-foreground ${stock === 0 ? 'opacity-60 grayscale pointer-events-none' : ''}`}
                     onClick={() => addToCart(product)}
                     >
-                    <div className="aspect-4/3 bg-gray-200 relative overflow-hidden">
+                    <div className="aspect-4/3 bg-muted relative overflow-hidden">
                         {product.image_url ? (
                         <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                         ) : (
-                        <div className="flex items-center justify-center h-full text-gray-400">No Image</div>
+                        <div className="flex items-center justify-center h-full text-muted-foreground">No Image</div>
                         )}
                         <div className="absolute top-2 right-2">
                             <Badge variant={stock > 0 ? "secondary" : "destructive"} className="shadow-md">
@@ -194,11 +193,11 @@ export default function POS() {
       </div>
 
       {/* RIGHT COLUMN: Cart */}
-      <div className="w-[400px] bg-white border-l flex flex-col shadow-2xl z-20 h-full">
-        <div className="p-5 border-b bg-gray-50/50 shrink-0">
+      <div className="w-[400px] bg-card border-l border-border flex flex-col shadow-2xl z-20 h-full">
+        <div className="p-5 border-b border-border bg-muted/20 shrink-0">
           <h2 className="font-bold text-lg flex justify-between items-center">
             Current Order
-            <span className="text-sm font-normal text-muted-foreground bg-white px-2 py-1 rounded border">
+            <span className="text-sm font-normal text-muted-foreground bg-background px-2 py-1 rounded border border-border">
               {cart.length} items
             </span>
           </h2>
@@ -208,7 +207,7 @@ export default function POS() {
              <ScrollArea className="h-full w-full pr-4">
                 <div className="space-y-3 pb-4">
                     {cart.map((item) => (
-                    <div key={item.id} className="bg-white border rounded-lg p-3 shadow-sm flex justify-between gap-3 group">
+                    <div key={item.id} className="bg-background border border-border rounded-lg p-3 shadow-sm flex justify-between gap-3 group">
                         <div className="flex-1 min-w-0">
                         <div className="font-medium truncate">{item.name}</div>
                         <div className="text-xs text-muted-foreground mt-1">R {item.price} each</div>
@@ -216,23 +215,30 @@ export default function POS() {
                         
                         <div className="flex flex-col items-end gap-2">
                         <div className="font-bold">R {(item.price * item.qty).toFixed(2)}</div>
-                        <div className="flex items-center gap-2 bg-gray-100 rounded-md p-0.5">
-                            <button className="w-6 h-6 flex items-center justify-center hover:bg-white rounded text-xs" onClick={() => updateQty(item.id, -1)}>-</button>
+                        <div className="flex items-center gap-2 bg-muted rounded-md p-0.5">
+                            <button className="w-6 h-6 flex items-center justify-center hover:bg-background rounded text-xs" onClick={() => updateQty(item.id, -1)}>-</button>
                             <span className="text-xs w-4 text-center font-medium">{item.qty}</span>
-                            <button className="w-6 h-6 flex items-center justify-center hover:bg-white rounded text-xs" onClick={() => updateQty(item.id, 1)}>+</button>
+                            <button className="w-6 h-6 flex items-center justify-center hover:bg-background rounded text-xs" onClick={() => updateQty(item.id, 1)}>+</button>
                         </div>
                         </div>
                         
-                        <button onClick={() => removeFromCart(item.id)} className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity px-1">
+                        <button onClick={() => removeFromCart(item.id)} className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity px-1">
                         <Trash2 className="w-4 h-4" />
                         </button>
                     </div>
                     ))}
+                    
+                    {cart.length === 0 && (
+                      <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2 min-h-[300px]">
+                        <Store className="w-12 h-12 opacity-20" />
+                        <p>Start scanning or clicking items</p>
+                      </div>
+                    )}
                 </div>
             </ScrollArea>
         </div>
 
-        <div className="p-5 border-t bg-gray-50 space-y-4 shrink-0">
+        <div className="p-5 border-t border-border bg-muted/20 space-y-4 shrink-0">
           <div className="space-y-1">
             <div className="flex justify-between text-sm text-muted-foreground">
               <span>Subtotal (Excl. Tax)</span>
@@ -242,7 +248,7 @@ export default function POS() {
               <span>VAT (15%)</span>
               <span>R {taxAmount.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between text-2xl font-extrabold mt-3 pt-3 border-t">
+            <div className="flex justify-between text-2xl font-extrabold mt-3 pt-3 border-t border-border">
               <span>Total</span>
               <span>R {total.toFixed(2)}</span>
             </div>

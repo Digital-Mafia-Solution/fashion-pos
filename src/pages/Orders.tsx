@@ -11,7 +11,6 @@ import {
 import { Badge } from "../components/ui/badge";
 import { format } from "date-fns";
 
-// 1. Define the shape of an Order
 interface Order {
   id: string;
   created_at: string;
@@ -24,40 +23,59 @@ interface Order {
 }
 
 export default function Orders() {
-  // 2. Use the Order[] type instead of any[]
   const [orders, setOrders] = useState<Order[]>([]);
 
   useEffect(() => {
     const fetchOrders = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("orders")
         .select(`
           *,
-          locations (name)
+          locations (
+            name
+          )
         `)
         .order("created_at", { ascending: false })
         .limit(50);
 
-      if (data) {
-        // 3. Cast the data to our Order type
-        setOrders(data as unknown as Order[]);
-      }
+      if (error) console.error("Error fetching orders:", error);
+      if (data) setOrders(data as unknown as Order[]);
     };
 
     fetchOrders();
+
+    const channel = supabase
+      .channel('realtime-orders')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'orders' },
+        () => {
+          fetchOrders();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   return (
-    <div className="container mx-auto py-10 px-6">
-      <h1 className="text-3xl font-bold mb-6">Transaction History</h1>
+    <div className="container mx-auto h-full flex flex-col py-6 px-6 bg-background text-foreground">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Transaction History</h1>
+        <Badge variant="secondary" className="text-sm">
+          Live Feed
+        </Badge>
+      </div>
       
-      <div className="rounded-md border bg-background">
+      <div className="rounded-md border border-border bg-card flex-1 overflow-auto shadow-sm">
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 bg-muted z-10">
             <TableRow>
               <TableHead>Order ID</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Location</TableHead>
+              <TableHead>Time</TableHead>
+              <TableHead>Store Location</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Amount</TableHead>
@@ -73,20 +91,24 @@ export default function Orders() {
             ) : (
               orders.map((order) => (
                 <TableRow key={order.id}>
-                  <TableCell className="font-medium font-mono text-xs">
+                  <TableCell className="font-medium font-mono text-xs text-muted-foreground">
                     {order.id.slice(0, 8)}...
                   </TableCell>
                   <TableCell>
                     {format(new Date(order.created_at), "MMM dd, HH:mm")}
                   </TableCell>
-                  <TableCell>{order.locations?.name || "Unknown"}</TableCell>
-                  <TableCell className="capitalize">{order.fulfillment_type}</TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="capitalize">
+                    {order.locations?.name || <span className="text-muted-foreground italic">Courier / Unknown</span>}
+                  </TableCell>
+                  <TableCell className="capitalize text-xs">
+                    <Badge variant="outline">{order.fulfillment_type}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className="capitalize bg-green-600 hover:bg-green-700 text-white">
                       {order.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right font-bold">
+                  <TableCell className="text-right font-bold font-mono">
                     R {order.total_amount.toFixed(2)}
                   </TableCell>
                 </TableRow>

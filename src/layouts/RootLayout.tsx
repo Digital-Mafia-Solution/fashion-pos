@@ -1,17 +1,18 @@
 import { Outlet } from "react-router-dom";
 import Navigation from "../components/Navigation";
-import Footer from "../components/Footer";
 import { Toaster } from "../components/ui/toaster";
 
 export default function RootLayout() {
   return (
-    <div className="flex min-h-screen flex-col bg-background font-sans antialiased">
+    // h-screen ensures the app never exceeds the browser window height
+    <div className="flex h-screen flex-col bg-background font-sans antialiased overflow-hidden">
       <Navigation />
-      <main className="flex-1 flex flex-col overflow-hidden">
-        {/* The 'Outlet' renders the child route (e.g. Index.tsx) */}
+      
+      {/* flex-1 takes all remaining space. overflow-hidden prevents window scroll */}
+      <main className="flex-1 flex flex-col overflow-hidden relative">
         <Outlet />
       </main>
-      <Footer />
+      
       <Toaster />
     </div>
   );
