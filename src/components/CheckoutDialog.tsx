@@ -88,7 +88,11 @@ export function CheckoutDialog({
       toast.success(`Sale complete: R ${total.toFixed(2)}`);
 
       // 4. Trigger Print with extended details
-      printReceipt(order.id, total, cart, storeName, cashierName);
+      const shouldPrint = localStorage.getItem("pos_print_receipts") !== "false";
+
+      if (shouldPrint) {
+        printReceipt(order.id, total, cart, storeName, cashierName);
+      }
       
       // Close after 2 seconds
       setTimeout(() => {
