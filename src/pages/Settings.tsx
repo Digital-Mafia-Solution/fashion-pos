@@ -1,26 +1,51 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabase"; // Import supabase
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../components/ui/card";
 import { Label } from "../components/ui/label";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { Switch } from "../components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"; // Import Select components
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Printer, ScanBarcode, Wifi, Save, RotateCcw, Monitor } from "lucide-react";
 import { toast } from "sonner";
+
+interface Location {
+  id: string;
+  name: string;
+}
 
 export default function Settings() {
   // FIX: Lazy initialization reads from localStorage once on mount
   // This prevents the "set-state-in-effect" error and avoids double-rendering
   const [taxRate, setTaxRate] = useState(() => localStorage.getItem("pos_tax_rate") || "15");
   const [terminalName, setTerminalName] = useState(() => localStorage.getItem("pos_terminal_name") || "Register-01");
-  
+  const [assignedStore, setAssignedStore] = useState(() => localStorage.getItem("pos_location_id") || "");
+
+  const [availableLocations, setAvailableLocations] = useState<Location[]>([]);
   const [printReceipts, setPrintReceipts] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from("locations")
+      .select("id, name")
+      .eq("type", "store")
+      .eq("is_active", true)
+      .then(({ data }) => {
+        if (data) setAvailableLocations(data);
+      });
+  }, []);
 
   const handleSave = () => {
     localStorage.setItem("pos_tax_rate", taxRate);
     localStorage.setItem("pos_terminal_name", terminalName);
-    toast.success("Settings saved successfully");
+    localStorage.setItem("pos_location_id", assignedStore);
+    
+    // Dispatch a storage event so other tabs/components update if listening
+    window.dispatchEvent(new Event("storage"));
+    
+    toast.success("Terminal configuration saved");
   };
 
   return (
@@ -44,6 +69,33 @@ export default function Settings() {
 
         {/* GENERAL SETTINGS */}
         <TabsContent value="general" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Store Assignment</CardTitle>
+              <CardDescription>Lock this terminal to a specific physical location.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+               <div className="grid gap-2">
+                <Label>Assigned Location</Label>
+                <Select value={assignedStore} onValueChange={setAssignedStore}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a store to provision..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableLocations.map((loc) => (
+                      <SelectItem key={loc.id} value={loc.id}>
+                        {loc.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                    Changing this will reset the inventory view on the main POS screen.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Terminal Configuration</CardTitle>

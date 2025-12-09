@@ -4,6 +4,7 @@ import { Button } from "../components/ui/button";
 import { CheckCircle2, Loader2, CreditCard, Banknote } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { toast } from "sonner";
+import { printReceipt } from "../lib/printer";
 
 interface Product {
   id: string;
@@ -36,7 +37,7 @@ export function CheckoutDialog({ open, onOpenChange, cart, total, locationId, on
         .from("orders")
         .insert({
           total_amount: total,
-          status: "paid",
+          status: "pos_complete",
           fulfillment_type: "pickup",
           pickup_location_id: locationId
         })
@@ -70,6 +71,10 @@ export function CheckoutDialog({ open, onOpenChange, cart, total, locationId, on
       // 3. Success
       setStep("success");
       toast.success(`Sale complete: R ${total.toFixed(2)}`);
+
+      // 4. Trigger Print (Wait a moment for the order ID to be ready)
+      // You might need to fetch the store name or pass it in via props
+      printReceipt(order.id, total, cart, "Fashion Store");
       
       // Close after 2 seconds
       setTimeout(() => {
