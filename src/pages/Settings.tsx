@@ -314,7 +314,7 @@ export default function Settings() {
                           variant={
                             user.role === "manager" ? "default" : "outline"
                           }
-                          className="capitalize"
+                          className="hidden md:inline capitalize"
                         >
                           {user.role}
                         </Badge>
