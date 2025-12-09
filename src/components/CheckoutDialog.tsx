@@ -22,10 +22,24 @@ interface CheckoutDialogProps {
   cart: CartItem[];
   total: number;
   locationId: string;
+  cashierId?: string;
+  // NEW PROPS
+  cashierName?: string;
+  storeName?: string;
   onSuccess: () => void;
 }
 
-export function CheckoutDialog({ open, onOpenChange, cart, total, locationId, onSuccess }: CheckoutDialogProps) {
+export function CheckoutDialog({ 
+  open, 
+  onOpenChange, 
+  cart, 
+  total, 
+  locationId, 
+  cashierId,
+  cashierName = "Staff", // Default fallback
+  storeName = "Store",   // Default fallback
+  onSuccess 
+}: CheckoutDialogProps) {
   const [step, setStep] = useState<"method" | "processing" | "success">("method");
 
   const processSale = async () => {
@@ -39,7 +53,8 @@ export function CheckoutDialog({ open, onOpenChange, cart, total, locationId, on
           total_amount: total,
           status: "pos_complete",
           fulfillment_type: "pickup",
-          pickup_location_id: locationId
+          pickup_location_id: locationId,
+          cashier_id: cashierId
         })
         .select()
         .single();
@@ -72,13 +87,12 @@ export function CheckoutDialog({ open, onOpenChange, cart, total, locationId, on
       setStep("success");
       toast.success(`Sale complete: R ${total.toFixed(2)}`);
 
-      // 4. Trigger Print (Wait a moment for the order ID to be ready)
-      // You might need to fetch the store name or pass it in via props
-      printReceipt(order.id, total, cart, "Fashion Store");
+      // 4. Trigger Print with extended details
+      printReceipt(order.id, total, cart, storeName, cashierName);
       
       // Close after 2 seconds
       setTimeout(() => {
-        onSuccess(); // Clear cart in parent
+        onSuccess(); 
         onOpenChange(false);
         setStep("method");
       }, 2000);
@@ -143,7 +157,6 @@ export function CheckoutDialog({ open, onOpenChange, cart, total, locationId, on
 
           {step === "success" && (
             <div className="flex flex-col items-center justify-center py-8">
-              {/* Use text-primary to match your theme (green) */}
               <CheckCircle2 className="w-16 h-16 text-primary mb-4" />
               <p className="text-lg font-medium text-foreground">Receipt Sent</p>
             </div>

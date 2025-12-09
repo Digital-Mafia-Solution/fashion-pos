@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
+import { useAuth } from "../components/AuthProvider";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -30,8 +30,9 @@ interface CartItem extends Product {
 }
 
 export default function POS() {
+  const { profile } = useAuth(); // Get profile
   const [products, setProducts] = useState<Product[]>([]);
-  const [storeId, setStoreId] = useState<string | null>(() => localStorage.getItem("pos_location_id"));
+  const storeId = profile?.assigned_location_id;
   const [storeName, setStoreName] = useState<string>("Loading...");
   
   const [search, setSearch] = useState("");
@@ -49,13 +50,6 @@ export default function POS() {
                 if (data) setStoreName(data.name);
             });
     }
-
-    const handleStorageChange = () => {
-        setStoreId(localStorage.getItem("pos_location_id"));
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
   }, [storeId]);
 
   // 2. Fetch Inventory specific to this Store
@@ -133,14 +127,11 @@ export default function POS() {
         <div className="flex h-full w-full items-center justify-center bg-muted/20">
             <div className="text-center space-y-4 px-6">
                 <AlertCircle className="w-16 h-16 text-destructive mx-auto" />
-                <h1 className="text-2xl font-bold">Terminal Not Configured</h1>
+                <h1 className="text-2xl font-bold">No Store Assigned</h1>
                 <p className="text-muted-foreground max-w-md">
-                    This terminal has not been assigned to a store location yet. 
-                    Please go to settings to provision this device.
+                    Your account ({profile?.email}) is not linked to a specific store location.
+                    Please ask an administrator to assign you to a location.
                 </p>
-                <Link to="/settings">
-                    <Button>Go to Settings</Button>
-                </Link>
             </div>
         </div>
     );
@@ -324,6 +315,9 @@ export default function POS() {
         cart={cart}
         total={total} 
         locationId={storeId} 
+        cashierId={profile?.id}
+        cashierName={profile?.full_name || "Staff"}
+        storeName={storeName}
         onSuccess={() => setCart([])}
       />
     </div>

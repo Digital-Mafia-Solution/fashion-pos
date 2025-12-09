@@ -1,51 +1,114 @@
-import { useEffect, useState } from "react";
-import { supabase } from "../lib/supabase"; // Import supabase
+import { useEffect, useState, useCallback } from "react";
+import { supabase } from "../lib/supabase";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../components/ui/card";
 import { Label } from "../components/ui/label";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { Switch } from "../components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"; // Import Select components
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
-import { Printer, ScanBarcode, Wifi, Save, RotateCcw, Monitor } from "lucide-react";
+import { Printer, ScanBarcode, Wifi, Save, RotateCcw, Monitor, UserPlus, Shield, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "../components/ui/dialog";
 import { toast } from "sonner";
+import { useAuth } from "../components/AuthProvider";
+import { Badge } from "../components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 
-interface Location {
+interface UserProfile {
   id: string;
-  name: string;
+  email: string;
+  full_name: string;
+  role: string;
+  avatar_url: string | null;
+  assigned_location_id: string | null;
 }
 
 export default function Settings() {
-  // FIX: Lazy initialization reads from localStorage once on mount
-  // This prevents the "set-state-in-effect" error and avoids double-rendering
+  const { profile } = useAuth();
+  
+  // Local Settings
   const [taxRate, setTaxRate] = useState(() => localStorage.getItem("pos_tax_rate") || "15");
   const [terminalName, setTerminalName] = useState(() => localStorage.getItem("pos_terminal_name") || "Register-01");
-  const [assignedStore, setAssignedStore] = useState(() => localStorage.getItem("pos_location_id") || "");
-
-  const [availableLocations, setAvailableLocations] = useState<Location[]>([]);
   const [printReceipts, setPrintReceipts] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
-  useEffect(() => {
-    supabase
-      .from("locations")
-      .select("id, name")
-      .eq("type", "store")
-      .eq("is_active", true)
-      .then(({ data }) => {
-        if (data) setAvailableLocations(data);
-      });
+  // Data State
+  const [staff, setStaff] = useState<UserProfile[]>([]);
+  const [loadingStaff, setLoadingStaff] = useState(false);
+
+  // Create Cashier State
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newCashier, setNewCashier] = useState({
+    fullName: "",
+    email: "",
+    password: ""
+  });
+
+  // Fetch staff assigned to the same location
+  const fetchStaff = useCallback(async (locationId: string) => {
+    setLoadingStaff(true);
+    const { data } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("assigned_location_id", locationId);
+    
+    if (data) setStaff(data as unknown as UserProfile[]);
+    setLoadingStaff(false);
   }, []);
+
+  // Use primitive dependency to prevent infinite loops
+  const locationId = profile?.assigned_location_id;
+
+  useEffect(() => {
+    if (locationId) {
+      fetchStaff(locationId);
+    }
+  }, [locationId, fetchStaff]);
 
   const handleSave = () => {
     localStorage.setItem("pos_tax_rate", taxRate);
     localStorage.setItem("pos_terminal_name", terminalName);
-    localStorage.setItem("pos_location_id", assignedStore);
-    
-    // Dispatch a storage event so other tabs/components update if listening
     window.dispatchEvent(new Event("storage"));
-    
     toast.success("Terminal configuration saved");
+  };
+
+  const handleCreateCashier = async () => {
+    if (!newCashier.email || !newCashier.password || !newCashier.fullName) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    setCreating(true);
+    try {
+      // Use the 'create-user' Edge Function
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: {
+          email: newCashier.email,
+          password: newCashier.password,
+          fullName: newCashier.fullName,
+          role: 'cashier', // Automatically set role
+          location_id: profile?.assigned_location_id // Automatically assign to manager's store
+        }
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast.success("Cashier account created successfully");
+      setIsCreateOpen(false);
+      setNewCashier({ fullName: "", email: "", password: "" });
+      
+      // Refresh the list
+      if (locationId) fetchStaff(locationId);
+
+    } catch (error: unknown) {
+      console.error(error);
+      let msg = "Failed to create account";
+      if (error instanceof Error) msg = error.message;
+      toast.error(msg);
+    } finally {
+      setCreating(false);
+    }
   };
 
   return (
@@ -53,16 +116,20 @@ export default function Settings() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-          <p className="text-muted-foreground">Manage terminal configuration and preferences.</p>
+          <p className="text-muted-foreground">Manage terminal configuration and team.</p>
         </div>
-        <Button onClick={handleSave} className="gap-2">
-          <Save className="w-4 h-4" /> Save Changes
-        </Button>
+        {/* Only Managers/Admins can save config changes */}
+        {(profile?.role === 'manager' || profile?.role === 'admin') && (
+          <Button onClick={handleSave} className="gap-2">
+            <Save className="w-4 h-4" /> Save Changes
+          </Button>
+        )}
       </div>
 
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 lg:w-[400px] mb-8">
+        <TabsList className="grid w-full grid-cols-4 lg:w-[500px] mb-8">
           <TabsTrigger value="general">General</TabsTrigger>
+          <TabsTrigger value="team">Team</TabsTrigger>
           <TabsTrigger value="hardware">Hardware</TabsTrigger>
           <TabsTrigger value="diagnostics">Diagnostics</TabsTrigger>
         </TabsList>
@@ -71,53 +138,17 @@ export default function Settings() {
         <TabsContent value="general" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Store Assignment</CardTitle>
-              <CardDescription>Lock this terminal to a specific physical location.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-               <div className="grid gap-2">
-                <Label>Assigned Location</Label>
-                <Select value={assignedStore} onValueChange={setAssignedStore}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a store to provision..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableLocations.map((loc) => (
-                      <SelectItem key={loc.id} value={loc.id}>
-                        {loc.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                    Changing this will reset the inventory view on the main POS screen.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
               <CardTitle>Terminal Configuration</CardTitle>
               <CardDescription>Identify this specific machine.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-2">
-                <Label htmlFor="terminal-name">Terminal Name</Label>
-                <Input 
-                  id="terminal-name" 
-                  value={terminalName} 
-                  onChange={(e) => setTerminalName(e.target.value)} 
-                />
+                <Label>Terminal Name</Label>
+                <Input value={terminalName} onChange={(e) => setTerminalName(e.target.value)} />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="tax-rate">VAT Rate (%)</Label>
-                <Input 
-                  id="tax-rate" 
-                  type="number" 
-                  value={taxRate} 
-                  onChange={(e) => setTaxRate(e.target.value)} 
-                />
+                <Label>VAT Rate (%)</Label>
+                <Input type="number" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} />
               </div>
             </CardContent>
           </Card>
@@ -133,6 +164,69 @@ export default function Settings() {
                   <p className="text-sm text-muted-foreground">Play beep on scan/add to cart.</p>
                 </div>
                 <Switch checked={soundEnabled} onCheckedChange={setSoundEnabled} />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* TEAM MANAGEMENT */}
+        <TabsContent value="team" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Staff Management</CardTitle>
+              <CardDescription>
+                Manage users assigned to <strong>{profile?.assigned_location_id ? "this store" : "your location"}</strong>.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex justify-between items-center border-b pb-6">
+                <div className="space-y-1">
+                  <h3 className="font-medium">Store Team</h3>
+                  <p className="text-sm text-muted-foreground">Cashiers can process sales but cannot access global settings.</p>
+                </div>
+                
+                {/* RESTRICTION: Only Managers can see the button */}
+                {profile?.role === 'manager' && (
+                  <Button onClick={() => setIsCreateOpen(true)} disabled={!profile?.assigned_location_id}>
+                    <UserPlus className="w-4 h-4 mr-2" /> Register New Cashier
+                  </Button>
+                )}
+              </div>
+
+              {/* Staff List */}
+              <div className="space-y-4">
+                {loadingStaff ? (
+                  <div className="flex justify-center py-4"><Loader2 className="animate-spin h-6 w-6 text-muted-foreground"/></div>
+                ) : staff.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground italic border rounded-lg border-dashed">
+                    No other staff assigned to this location.
+                  </div>
+                ) : (
+                  staff.map((user) => (
+                    <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg bg-card">
+                      <div className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarImage src={user.avatar_url || ""} />
+                          <AvatarFallback>{user.full_name?.charAt(0) || "U"}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium flex items-center gap-2">
+                            {user.full_name || "Unknown User"}
+                            {user.id === profile?.id && <Badge variant="secondary" className="text-[10px] h-5">You</Badge>}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{user.email}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <Badge variant={user.role === 'manager' ? 'default' : 'outline'} className="capitalize">
+                          {user.role}
+                        </Badge>
+                        <Shield className="w-4 h-4 text-muted-foreground opacity-50" />
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
@@ -202,6 +296,52 @@ export default function Settings() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* CREATE CASHIER DIALOG */}
+      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Register New Cashier</DialogTitle>
+            <DialogDescription>
+              Create an account for a staff member. They will be assigned to this store.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Full Name</Label>
+              <Input 
+                value={newCashier.fullName} 
+                onChange={e => setNewCashier({...newCashier, fullName: e.target.value})}
+                placeholder="John Doe"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email Address</Label>
+              <Input 
+                type="email" 
+                value={newCashier.email} 
+                onChange={e => setNewCashier({...newCashier, email: e.target.value})}
+                placeholder="john@store.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Password</Label>
+              <Input 
+                type="password" 
+                value={newCashier.password} 
+                onChange={e => setNewCashier({...newCashier, password: e.target.value})}
+                placeholder="Set a secure password"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleCreateCashier} disabled={creating}>
+              {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Create Account
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
