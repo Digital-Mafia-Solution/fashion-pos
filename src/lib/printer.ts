@@ -1,9 +1,9 @@
 // Define the shape of the item specifically for the receipt
-export interface ReceiptItem {
+export type ReceiptItem = {
   name: string;
   price: number;
   qty: number;
-}
+};
 
 export const printReceipt = (
   orderId: string, 

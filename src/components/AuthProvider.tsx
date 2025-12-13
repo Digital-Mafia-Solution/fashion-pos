@@ -1,14 +1,9 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import type { Session } from "@supabase/supabase-js";
+import type { Tables } from "../lib/database.types";
 
-interface UserProfile {
-  id: string;
-  email: string;
-  full_name: string;
-  role: "admin" | "manager" | "driver" | "customer";
-  assigned_location_id: string | null;
-}
+type UserProfile = Tables<"profiles">;
 
 interface AuthContextType {
   session: Session | null;

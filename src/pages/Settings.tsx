@@ -41,15 +41,9 @@ import { toast } from "sonner";
 import { useAuth } from "../components/AuthProvider";
 import { Badge } from "../components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
+import type { Tables } from "../lib/database.types";
 
-interface UserProfile {
-  id: string;
-  email: string;
-  full_name: string;
-  role: string;
-  avatar_url: string | null;
-  assigned_location_id: string | null;
-}
+type UserProfile = Tables<"profiles">;
 
 export default function Settings() {
   const { profile } = useAuth();
@@ -178,11 +172,11 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:w-[500px] mb-8">
+        <TabsList className="grid w-full grid-cols-2 lg:w-[500px] mb-8">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="team">Team</TabsTrigger>
-          <TabsTrigger value="hardware">Hardware</TabsTrigger>
-          <TabsTrigger value="diagnostics">Diagnostics</TabsTrigger>
+          {/* <TabsTrigger value="hardware">Hardware</TabsTrigger> */}
+          {/* <TabsTrigger value="diagnostics">Diagnostics</TabsTrigger> */}
         </TabsList>
 
         {/* GENERAL SETTINGS */}
@@ -211,7 +205,7 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="hidden">
             <CardHeader>
               <CardTitle>Preferences</CardTitle>
             </CardHeader>
